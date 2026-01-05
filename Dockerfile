@@ -16,20 +16,13 @@ COPY app/ .
 # Build the application
 RUN npm run build
 
-# Stage 2: Serve the application
-# We use Alpine for the final image to keep it small
-FROM node:20-alpine
+# Stage 2: Serve the application with Nginx
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy built assets from builder stage to Nginx html directory
+COPY --from=builder /app/build /usr/share/nginx/html
 
-# Install serve globally
-RUN npm install -g serve
+# Expose port 80
+EXPOSE 80
 
-# Copy built assets from the builder stage
-COPY --from=builder /app/build ./build
-
-# Expose port 3000
-EXPOSE 3000
-
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Nginx runs automatically, no CMD needed

@@ -16,7 +16,7 @@ spec:
       - name: bookmyshow-app
         image: REPLACE_WITH_ECR_URI:REPLACE_WITH_IMAGE_TAG
         ports:
-        - containerPort: 3000
+        - containerPort: 80
         resources:
           requests:
             memory: "64Mi"
