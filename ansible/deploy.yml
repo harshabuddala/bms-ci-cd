@@ -1,0 +1,35 @@
+---
+- name: Deploy to EKS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # these will be passed from Jenkins
+    # env: "dev" or "prod"
+    # image_tag: "build-123"
+    # ecr_repo: "..."
+  tasks:
+    - name: Create namespace if not exists
+      command: kubectl create namespace {{ env }}
+      register: namespace_create
+      failed_when: namespace_create.rc != 0 and "AlreadyExists" not in namespace_create.stderr
+      ignore_errors: true
+
+    - name: Update deployment file with dynamic image tag and apply
+      shell: |
+        # Create a temporary file to avoid changing the git tracked file
+        cp ./kubernetes/deployment.yml ./kubernetes/deployment_temp.yml
+        
+        # Replace the placeholders with actual values
+        sed -i 's|REPLACE_WITH_ECR_URI:REPLACE_WITH_IMAGE_TAG|{{ ecr_repo }}:{{ image_tag }}|g' ./kubernetes/deployment_temp.yml
+        
+        # Apply the deployment to the specific namespace
+        kubectl apply -f ./kubernetes/deployment_temp.yml -n {{ env }}
+        
+        # Apply the service
+        kubectl apply -f ./kubernetes/service.yml -n {{ env }}
+        
+        # Clean up
+        rm ./kubernetes/deployment_temp.yml
+      args:
+        executable: /bin/bash

@@ -2,11 +2,10 @@ pipeline {
     agent any
 
     environment {
-        // Define variables for reusability
-        IMAGE_NAME = "bookmyshow-app"
-        CONTAINER_NAME = "bms-app"
-        HOST_PORT = "3001"
-        CONTAINER_PORT = "3000"
+        // REPLACE THIS WITH YOUR ECR REPO URI (e.g. 123456789012.dkr.ecr.ap-south-1.amazonaws.com/bookmyshow-app)
+        ECR_REPO_URI = '460474850557.dkr.ecr.ap-south-1.amazonaws.com/bms'
+        AWS_REGION = 'ap-south-1' 
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -20,51 +19,69 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker Image...'
-                    sh "docker build -t ${IMAGE_NAME}:latest ."
+                    sh "docker build -t ${ECR_REPO_URI}:${IMAGE_TAG} ."
                 }
             }
         }
 
-        stage('Cleanup Old Container') {
+        stage('Push to ECR') {
             steps {
                 script {
-                    echo 'Cleaning up any existing container...'
-                    sh "docker rm -f ${CONTAINER_NAME} || true"
-                    // Remove dangling images (intermediate builder layers)
-                    sh "docker image prune -f"
+                    echo 'Logging into ECR...'
+                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO_URI}"
+                    
+                    echo 'Pushing Docker Image...'
+                    sh "docker push ${ECR_REPO_URI}:${IMAGE_TAG}"
                 }
             }
         }
 
-        stage('Run Container') {
+        stage('Deploy to Dev') {
             steps {
                 script {
-                    echo 'Running Docker Container...'
-                    // Run the container in detached mode
-                    sh "docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest"
+                    echo 'Deploying to Dev Environment...'
+                    // Run Ansible playbook
+                    sh "ansible-playbook ansible/deploy.yml -e \"env=dev image_tag=${IMAGE_TAG} ecr_repo=${ECR_REPO_URI}\""
+                }
+            }
+        }
+        
+        stage('Validation') {
+            steps {
+                echo 'Validating Dev Environment...'
+                // You can add automated tests here (e.g. curl check)
+                sh "kubectl get pods -n dev"
+                sh "kubectl get svc -n dev"
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                script {
+                    env.PROCEED_TO_PROD = input message: 'User verification required',
+                                        parameters: [choice(name: 'Promote to Production?', choices: 'yes\nno', description: 'Check Grafana/Prometheus before approving')]
                 }
             }
         }
 
-        stage('Verify Deployment') {
+        stage('Deploy to Prod') {
+            when {
+                expression { env.PROCEED_TO_PROD == 'yes' }
+            }
             steps {
                 script {
-                    echo 'Verifying container status...'
-                    // Wait a few seconds for startup
-                    sleep 5
-                    // Check if container is listed in docker ps
-                    sh "docker ps | grep ${CONTAINER_NAME}"
+                    echo 'Deploying to Production Environment...'
+                    sh "ansible-playbook ansible/deploy.yml -e \"env=prod image_tag=${IMAGE_TAG} ecr_repo=${ECR_REPO_URI}\""
                 }
             }
         }
     }
-
+    
     post {
-        failure {
-            echo 'Pipeline failed. Please check logs.'
-        }
-        success {
-            echo 'Pipeline succeeded. Application is running on port ${HOST_PORT}'
+        always {
+            echo 'Pipeline execution finished.'
+            // Clean up docker images to save space (optional)
+            sh "docker rmi ${ECR_REPO_URI}:${IMAGE_TAG} || true"
         }
     }
 }
