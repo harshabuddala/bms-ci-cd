@@ -5,13 +5,13 @@ FROM node:20 AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY app/package.json app/package-lock.json ./
 
 # Install dependencies with legacy-peer-deps to handle React/MUI conflicts
 RUN npm install --legacy-peer-deps
 
 # Copy source code
-COPY . .
+COPY app/ .
 
 # Build the application
 RUN npm run build
