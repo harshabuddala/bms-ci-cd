@@ -12,7 +12,6 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Checkout code from source control
                 checkout scm
             }
         }
@@ -21,8 +20,6 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker Image...'
-                    // Build the image using the Dockerfile in the current directory
-                    // Since we updated to Multi-Stage, this handles the build process internally
                     sh "docker build -t ${IMAGE_NAME}:latest ."
                 }
             }
@@ -32,8 +29,9 @@ pipeline {
             steps {
                 script {
                     echo 'Cleaning up any existing container...'
-                    // Stop and remove the container if it exists, ignore errors if it doesn't
                     sh "docker rm -f ${CONTAINER_NAME} || true"
+                    // Remove dangling images (intermediate builder layers)
+                    sh "docker image prune -f"
                 }
             }
         }
