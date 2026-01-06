@@ -18,7 +18,7 @@ export const RecommendedMovies = () => {
     return (
         <div className={styles.parent}>
             <div className={styles.parent__text}>
-                <h1>Recommended Movies [Updated]</h1>
+                <h1>Recommended Movies shows</h1>
                 <Link to="/ncr/movies" className={styles.link}>See all <RiArrowRightSLine /></Link>
             </div>
             <MovieCarousel movies={filteredRecommendedMovies} />
