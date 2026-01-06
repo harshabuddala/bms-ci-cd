@@ -9,6 +9,12 @@ coverage
 # Production
 build
 dist
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
 
 # Misc
 .DS_Store

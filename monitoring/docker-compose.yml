@@ -6,6 +6,7 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ${HOME}/.kube/config:/etc/prometheus/kubeconfig
     ports:
       - "9090:9090"
     restart: always
@@ -18,7 +19,7 @@ services:
     restart: always
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
-      
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
