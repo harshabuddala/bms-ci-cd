@@ -11,9 +11,16 @@ scrape_configs:
       - targets: ['node-exporter:9100']
 
   - job_name: 'kubernetes-pods'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    bearer_token_file: /etc/prometheus/k8s_token
     kubernetes_sd_configs:
       - role: pod
-        kubeconfig_file: /etc/prometheus/kubeconfig
+        api_server: https://BAA039AE86BFFEDD48329BB099682484.gr7.ap-south-1.eks.amazonaws.com
+        tls_config:
+          insecure_skip_verify: true
+        bearer_token_file: /etc/prometheus/k8s_token
     relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_pod_label_(.+)

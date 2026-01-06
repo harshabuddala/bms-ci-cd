@@ -6,7 +6,7 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ${HOME}/.kube/config:/etc/prometheus/kubeconfig
+      - ./k8s_token:/etc/prometheus/k8s_token
     ports:
       - "9090:9090"
     restart: always
